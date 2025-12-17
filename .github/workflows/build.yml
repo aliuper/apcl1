@@ -1,0 +1,20 @@
+# .github/workflows/build.yml
+
+name: Build & Release APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  workflow_dispatch:  # Manuel tetikleme
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - Setup Java 17
+      - Setup Flutter 3.24
+      - flutter pub get
+      - flutter build apk --release
+      - Upload artifacts
