@@ -34,6 +34,26 @@ jobs:
           flutter-version: 3.24.0
           channel: stable
 
+      - name: Create Flutter project structure
+        run: |
+          # Save our source files
+          mkdir -p /tmp/backup
+          cp -r lib /tmp/backup/
+          cp pubspec.yaml /tmp/backup/
+          cp -r assets /tmp/backup/ 2>/dev/null || true
+          
+          # Clean current directory (keep git)
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
+          
+          # Create fresh Flutter project
+          flutter create --org com.iptvgroupeditor --project-name iptv_group_editor --platforms android .
+          
+          # Restore our source files
+          rm -rf lib
+          cp -r /tmp/backup/lib .
+          cp /tmp/backup/pubspec.yaml .
+          cp -r /tmp/backup/assets . 2>/dev/null || true
+
       - name: Get dependencies
         run: flutter pub get
 
