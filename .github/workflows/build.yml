@@ -31,7 +31,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.24.0
           channel: stable
 
       - name: Create Flutter project structure
@@ -53,6 +52,23 @@ jobs:
           cp -r /tmp/backup/lib .
           cp /tmp/backup/pubspec.yaml .
           cp -r /tmp/backup/assets . 2>/dev/null || true
+
+      - name: Update Kotlin version
+        run: |
+          # Update Kotlin version in settings.gradle
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle
+          
+          # Also update in build.gradle if exists
+          if [ -f android/build.gradle ]; then
+            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
+          fi
+          
+          # Show updated files
+          echo "=== settings.gradle ==="
+          cat android/settings.gradle
+          echo ""
+          echo "=== build.gradle ==="
+          cat android/build.gradle 2>/dev/null || echo "No build.gradle"
 
       - name: Get dependencies
         run: flutter pub get
