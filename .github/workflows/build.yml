@@ -31,53 +31,46 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: 3.24.0
           channel: stable
 
-      - name: Create Flutter project structure
+      - name: Update Kotlin version and fix permissions
         run: |
-          # Save our source files
-          mkdir -p /tmp/backup
-          cp -r lib /tmp/backup/
-          cp pubspec.yaml /tmp/backup/
-          cp -r assets /tmp/backup/ 2>/dev/null || true
-          
-          # Clean current directory (keep git)
-          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
-          
-          # Create fresh Flutter project
-          flutter create --org com.iptvgroupeditor --project-name iptv_group_editor --platforms android .
-          
-          # Restore our source files
-          rm -rf lib
-          cp -r /tmp/backup/lib .
-          cp /tmp/backup/pubspec.yaml .
-          cp -r /tmp/backup/assets . 2>/dev/null || true
+          # Update Kotlin version in android/build.gradle
+          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
 
-      - name: Update Kotlin version
-        run: |
-          # Update Kotlin version in settings.gradle
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle
-          
-          # Also update in build.gradle if exists
-          if [ -f android/build.gradle ]; then
-            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle
-          fi
-          
-          # Show updated files
-          echo "=== settings.gradle ==="
-          cat android/settings.gradle
-          echo ""
-          echo "=== build.gradle ==="
-          cat android/build.gradle 2>/dev/null || echo "No build.gradle"
+          # Ensure Gradle wrapper has execute permissions
+          chmod +x android/gradlew
+
+          # Create local.properties
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> android/local.properties
 
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Clean and build
+        run: |
+          # Clean previous builds
+          flutter clean
+          flutter pub get
+
       - name: Build Release APK
-        run: flutter build apk --release
+        run: |
+          echo "Starting APK build..."
+          flutter build apk --release --verbose
+          echo "APK build completed!"
 
       - name: Build Split APKs
-        run: flutter build apk --release --split-per-abi
+        run: |
+          echo "Starting split APK build..."
+          flutter build apk --release --split-per-abi --verbose
+          echo "Split APK build completed!"
+
+      - name: List build outputs
+        run: |
+          echo "Listing all APK files:"
+          find build/app/outputs/flutter-apk/ -name "*.apk" -type f -exec ls -la {} \;
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -85,6 +78,7 @@ jobs:
           name: release-apks
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 30
+        continue-on-error: true
 
   release:
     name: Create Release
